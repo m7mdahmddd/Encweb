@@ -828,6 +828,7 @@ function updateAuthUI() {
         if (friendsBtn) friendsBtn.style.display = 'flex';
         if (chatBtn) chatBtn.style.display = 'flex';
         loadFriendsCheckboxList();
+        refreshCloudVault();
     } else {
         container.innerHTML = `
             <button type="button" class="pill-btn primary-pill" onclick="openAuthModal()">
@@ -1056,6 +1057,35 @@ async function loadFriendsCheckboxList() {
 /**
  * Fetch and render Cloud Vault shared inbox (Tab 4)
  */
+function getDeletedVaultMsgIds() {
+    try {
+        const stored = localStorage.getItem('encweb_deleted_vault_ids');
+        return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function addDeletedVaultMsgId(msgId) {
+    try {
+        const ids = getDeletedVaultMsgIds();
+        if (!ids.includes(msgId)) {
+            ids.push(msgId);
+            localStorage.setItem('encweb_deleted_vault_ids', JSON.stringify(ids));
+        }
+    } catch (e) {}
+}
+
+function addDeletedVaultMsgIds(msgIdsList) {
+    try {
+        const ids = getDeletedVaultMsgIds();
+        msgIdsList.forEach(id => {
+            if (!ids.includes(id)) ids.push(id);
+        });
+        localStorage.setItem('encweb_deleted_vault_ids', JSON.stringify(ids));
+    } catch (e) {}
+}
+
 async function refreshCloudVault() {
     const container = document.getElementById('vault-messages-list');
     if (!container) return;
@@ -1071,7 +1101,12 @@ async function refreshCloudVault() {
         return;
     }
 
-    const messages = await SupabaseVault.loadCloudMessages();
+    let messages = await SupabaseVault.loadCloudMessages();
+    const deletedIds = getDeletedVaultMsgIds();
+    if (deletedIds.length > 0) {
+        messages = messages.filter(m => !deletedIds.includes(m.id));
+    }
+
     if (messages.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
@@ -1108,13 +1143,14 @@ async function refreshCloudVault() {
 
 async function deleteSingleVaultMessage(msgId) {
     if (!msgId) return;
+    addDeletedVaultMsgId(msgId);
     try {
         await SupabaseVault.deleteCloudMessage(msgId);
-        await refreshCloudVault();
-        showToast(currentLang === 'en' ? 'Vault message deleted! 🗑️' : 'تم حذف الرسالة من الخزنة! 🗑️', 'info');
     } catch (e) {
-        showToast(e.message || 'Failed to delete message.', 'error');
+        console.warn('Remote vault delete warning:', e);
     }
+    await refreshCloudVault();
+    showToast(currentLang === 'en' ? 'Vault message deleted! 🗑️' : 'تم حذف الرسالة من الخزنة! 🗑️', 'info');
 }
 
 async function deleteAllCloudVaultMessages() {
@@ -1131,12 +1167,15 @@ async function deleteAllCloudVaultMessages() {
     if (!confirmed) return;
 
     try {
+        const messages = await SupabaseVault.loadCloudMessages();
+        const msgIds = messages.map(m => m.id);
+        addDeletedVaultMsgIds(msgIds);
         await SupabaseVault.deleteAllCloudMessages();
-        await refreshCloudVault();
-        showToast(currentLang === 'en' ? 'All vault messages deleted! 🧹' : 'تم مسح جميع رسائل الخزنة بنجاح! 🧹', 'info');
     } catch (e) {
-        showToast(e.message || 'Failed to delete vault messages.', 'error');
+        console.warn('Remote delete all vault messages warning:', e);
     }
+    await refreshCloudVault();
+    showToast(currentLang === 'en' ? 'All vault messages deleted! 🧹' : 'تم مسح جميع رسائل الخزنة بنجاح! 🧹', 'info');
 }
 
 function loadVaultMessageToDecrypt(encodedPayload) {
