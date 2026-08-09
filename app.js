@@ -4,6 +4,36 @@
  * Supabase Auth, Friends Management, and Cloud Vault Sharing.
  */
 
+// Safe Fallback for Supabase Objects in case supabase-client.js fails to load
+if (typeof SupabaseAuth === 'undefined') {
+    window.SupabaseAuth = {
+        currentUser: null,
+        currentProfile: null,
+        initSession: async () => null,
+        saveLocalSession: () => {},
+        signUp: async () => {},
+        signIn: async () => {},
+        signOut: async () => {},
+        updatePassword: async () => {},
+        deleteAccount: async () => {}
+    };
+}
+if (typeof SupabaseFriends === 'undefined') {
+    window.SupabaseFriends = {
+        getFriends: async () => [],
+        searchUsers: async () => [],
+        addFriend: async () => {}
+    };
+}
+if (typeof SupabaseChat === 'undefined') {
+    window.SupabaseChat = {
+        sendMessage: async () => {},
+        loadChatMessages: async () => [],
+        checkUnreadChatCount: async () => 0,
+        clearChatHistory: async () => true
+    };
+}
+
 // Language Dictionary (English & Arabic)
 const I18N = {
     en: {
