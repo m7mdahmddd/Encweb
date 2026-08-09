@@ -1243,6 +1243,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (typeof SupabaseAuth !== 'undefined') {
         await SupabaseAuth.initSession();
         updateAuthUI();
+        startGlobalNotificationSync();
     }
 });
 
@@ -1255,6 +1256,8 @@ let chatPollTimer = null;
 
 let unreadChatCount = 0;
 let unreadFriendsCount = 0;
+let globalSyncTimer = null;
+let lastChatReadIsoTime = localStorage.getItem('encweb_last_chat_read') || new Date(0).toISOString();
 
 function updateBadgeUI() {
     const chatBadge = document.getElementById('chat-badge');
@@ -1281,12 +1284,42 @@ function updateBadgeUI() {
 
 function clearChatBadge() {
     unreadChatCount = 0;
+    lastChatReadIsoTime = new Date().toISOString();
+    localStorage.setItem('encweb_last_chat_read', lastChatReadIsoTime);
     updateBadgeUI();
 }
 
 function clearFriendsBadge() {
     unreadFriendsCount = 0;
     updateBadgeUI();
+}
+
+async function checkGlobalNotifications() {
+    if (!SupabaseAuth || !SupabaseAuth.currentUser) {
+        unreadChatCount = 0;
+        unreadFriendsCount = 0;
+        updateBadgeUI();
+        return;
+    }
+
+    if (typeof SupabaseChat !== 'undefined' && SupabaseChat.checkUnreadChatCount) {
+        const modal = document.getElementById('chat-modal');
+        const isChatModalOpen = modal && modal.style.display !== 'none';
+
+        if (isChatModalOpen) {
+            clearChatBadge();
+        } else {
+            const count = await SupabaseChat.checkUnreadChatCount(lastChatReadIsoTime);
+            unreadChatCount = count;
+            updateBadgeUI();
+        }
+    }
+}
+
+function startGlobalNotificationSync() {
+    if (globalSyncTimer) clearInterval(globalSyncTimer);
+    checkGlobalNotifications();
+    globalSyncTimer = setInterval(checkGlobalNotifications, 5000);
 }
 
 async function openChatModal(friendId = null) {

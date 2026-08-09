@@ -400,5 +400,31 @@ const SupabaseChat = {
             console.warn('Load chat messages error:', e);
             return [];
         }
+    },
+
+    /**
+     * Check unread incoming direct chat messages for current user since lastReadIsoTime
+     */
+    async checkUnreadChatCount(lastReadIsoTime) {
+        if (!supabaseClient || !SupabaseAuth.currentUser) return 0;
+        try {
+            const userId = SupabaseAuth.currentUser.id;
+            let query = supabaseClient
+                .from('secret_messages')
+                .select('id', { count: 'exact', head: true })
+                .eq('access_type', 'direct_chat')
+                .neq('sender_id', userId)
+                .contains('recipient_ids', [userId]);
+
+            if (lastReadIsoTime) {
+                query = query.gt('created_at', lastReadIsoTime);
+            }
+
+            const { count, error } = await query;
+            if (error) return 0;
+            return count || 0;
+        } catch (e) {
+            return 0;
+        }
     }
 };
