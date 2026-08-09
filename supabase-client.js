@@ -209,14 +209,21 @@ const SupabaseAuth = {
         const userId = user.id;
 
         if (supabaseClient) {
-            try {
+            // Pass user_id_to_delete to RPC function
+            const { error: rpcErr } = await supabaseClient.rpc('delete_user_account', {
+                user_id_to_delete: userId
+            });
+
+            if (rpcErr) {
+                console.error('RPC delete_user_account error:', rpcErr);
+                // Fallback manual table wipe if RPC function not created in Supabase yet
                 await supabaseClient.from('friends').delete().or(`user_id.eq.${userId},friend_id.eq.${userId}`);
                 await supabaseClient.from('secret_messages').delete().eq('sender_id', userId);
                 await supabaseClient.from('profiles').delete().eq('id', userId);
-                await supabaseClient.auth.signOut();
-            } catch (e) {
-                console.warn('Cleanup note during delete account:', e);
             }
+            try {
+                await supabaseClient.auth.signOut();
+            } catch (e) {}
         }
 
         this.currentUser = null;
