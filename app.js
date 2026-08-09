@@ -1119,6 +1119,17 @@ async function deleteSingleVaultMessage(msgId) {
 
 async function deleteAllCloudVaultMessages() {
     if (!SupabaseAuth.currentUser) return;
+
+    const title = currentLang === 'en' ? 'Delete All Vault Messages' : 'مسح كافة رسائل الخزنة';
+    const sub = currentLang === 'en' ? 'Permanent vault cleanup' : 'إجراء تنظيف غير قابل للتراجع';
+    const text = currentLang === 'en'
+        ? 'Are you sure you want to delete all cloud vault messages?'
+        : 'هل أنت تأكد من رغبتك في مسح جميع الرسائل الموجودة في الخزنة السحابية؟';
+    const btnText = currentLang === 'en' ? 'Delete All Messages' : 'مسح الكل الآن';
+
+    const confirmed = await promptConfirmDangerModal(title, sub, text, btnText);
+    if (!confirmed) return;
+
     try {
         await SupabaseVault.deleteAllCloudMessages();
         await refreshCloudVault();
@@ -1486,16 +1497,57 @@ async function selectChatFriend(friendId, friendUsername) {
     await loadChatMessagesStream();
 }
 
+const clearedChatTimestamps = {};
+
+let confirmDangerModalResolver = null;
+
+function promptConfirmDangerModal(title, subtitle, messageText, btnText) {
+    return new Promise((resolve) => {
+        confirmDangerModalResolver = resolve;
+        const modal = document.getElementById('confirm-danger-modal');
+        const titleEl = document.getElementById('confirm-danger-title');
+        const subEl = document.getElementById('confirm-danger-subtitle');
+        const textEl = document.getElementById('confirm-danger-text');
+        const btnTextEl = document.getElementById('confirm-danger-btn-text');
+
+        if (titleEl && title) titleEl.textContent = title;
+        if (subEl && subtitle) subEl.textContent = subtitle;
+        if (textEl && messageText) textEl.textContent = messageText;
+        if (btnTextEl && btnText) btnTextEl.textContent = btnText;
+
+        if (modal) modal.style.display = 'flex';
+        if (window.lucide) lucide.createIcons();
+    });
+}
+
+function closeConfirmDangerModal(confirmed = false) {
+    const modal = document.getElementById('confirm-danger-modal');
+    if (modal) modal.style.display = 'none';
+    if (confirmDangerModalResolver) {
+        confirmDangerModalResolver(confirmed);
+        confirmDangerModalResolver = null;
+    }
+}
+
+function submitConfirmDangerModal(confirmed = true) {
+    closeConfirmDangerModal(confirmed);
+}
+
 async function clearActiveChatMessages() {
     if (!activeChatFriendId) return;
 
-    const confirmMsg = currentLang === 'en'
+    const title = currentLang === 'en' ? 'Clear Chat History' : 'مسح سجل المحادثة';
+    const sub = currentLang === 'en' ? 'Permanent deletion' : 'إجراء مسح غير قابل للتراجع';
+    const text = currentLang === 'en'
         ? `Are you sure you want to delete all chat history with ${activeChatFriendName}?`
         : `هل أنت تأكد من رغبتك في مسح جميع رسائل المحادثة مع ${activeChatFriendName}؟`;
+    const btnText = currentLang === 'en' ? 'Delete Chat History' : 'مسح المحادثة الآن';
 
-    if (!confirm(confirmMsg)) return;
+    const confirmed = await promptConfirmDangerModal(title, sub, text, btnText);
+    if (!confirmed) return;
 
     try {
+        clearedChatTimestamps[activeChatFriendId] = Date.now();
         await SupabaseChat.clearChatHistory(activeChatFriendId);
         for (let key in revealedMessagesMap) {
             delete revealedMessagesMap[key];
@@ -1558,7 +1610,12 @@ async function loadChatMessagesStream(silent = false) {
         if (window.lucide) lucide.createIcons();
     }
 
-    const messages = await SupabaseChat.loadChatMessages(activeChatFriendId);
+    let messages = await SupabaseChat.loadChatMessages(activeChatFriendId);
+
+    const clearedTime = clearedChatTimestamps[activeChatFriendId];
+    if (clearedTime) {
+        messages = messages.filter(m => new Date(m.created_at).getTime() > clearedTime);
+    }
 
     if (!messages || messages.length === 0) {
         container.innerHTML = `
