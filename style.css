@@ -1193,8 +1193,13 @@ hr.modal-divider {
     transform: translateX(22px);
 }
 
+[dir="rtl"] .toggle-slider:before {
+    left: 3px;
+    right: auto;
+}
+
 [dir="rtl"] .toggle-switch-wrapper input:checked + .toggle-slider:before {
-    transform: translateX(-22px);
+    transform: translateX(22px);
 }
 
 /* Friends Picker & Checkbox Grid */

@@ -1458,6 +1458,8 @@ function toggleChatEncryptionMode() {
     );
 }
 
+const revealedMessagesMap = {};
+
 async function loadChatMessagesStream(silent = false) {
     if (!activeChatFriendId) return;
 
@@ -1487,15 +1489,19 @@ async function loadChatMessagesStream(silent = false) {
     container.innerHTML = messages.map(msg => {
         const isMine = msg.sender_id === currentUserId;
         const timeStr = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const isStego = CryptoEngine.hasHiddenPayload(msg.cover_text || msg.disguised_payload || '');
+        const rawText = msg.cover_text || msg.disguised_payload || '';
+        const isStego = CryptoEngine.hasHiddenPayload(rawText);
+        const revealedSecret = revealedMessagesMap[msg.id];
 
         return `
             <div class="chat-bubble-wrapper ${isMine ? 'outgoing' : 'incoming'}">
                 <div class="chat-bubble">
-                    <div class="chat-bubble-text">${msg.cover_text || msg.disguised_payload}</div>
+                    <div class="chat-bubble-text">
+                        ${revealedSecret ? `<span style="color:var(--emerald); font-weight:700;"><i data-lucide="unlock"></i> ${revealedSecret}</span>` : rawText}
+                    </div>
                     <div class="chat-bubble-meta">
                         ${isStego ? `<span class="stego-chip"><i data-lucide="eye-off"></i> Stego</span>` : ''}
-                        ${isStego ? `<button type="button" class="reveal-btn-sm" onclick="revealChatStegoMessage(this, '${encodeURIComponent(msg.cover_text || msg.disguised_payload)}')"><i data-lucide="unlock"></i> Reveal</button>` : ''}
+                        ${isStego && !revealedSecret ? `<button type="button" class="reveal-btn-sm" onclick="revealChatStegoMessage(this, '${msg.id}', '${encodeURIComponent(rawText)}')"><i data-lucide="unlock"></i> Reveal</button>` : ''}
                         <span>${timeStr}</span>
                     </div>
                 </div>
@@ -1507,27 +1513,20 @@ async function loadChatMessagesStream(silent = false) {
     container.scrollTop = container.scrollHeight;
 }
 
-async function revealChatStegoMessage(btnEl, encodedPayload) {
+async function revealChatStegoMessage(btnEl, msgId, encodedPayload) {
     const payload = decodeURIComponent(encodedPayload);
-    const defaultKey = 'encweb-friend-chat';
     const pass = prompt(
-        currentLang === 'en' ? 'Enter decryption key for secret message:' : 'أدخل كلمة السر لفك تشفير الرسالة السرية:',
-        defaultKey
+        currentLang === 'en' ? 'Enter decryption key used for this secret message:' : 'أدخل كلمة السر التشفيرية التي استُخدمت لتشفير هذه الرسالة:'
     );
     if (!pass) return;
 
     try {
         const decrypted = CryptoEngine.decrypt(payload, pass);
-        const bubble = btnEl.closest('.chat-bubble');
-        const textEl = bubble ? bubble.querySelector('.chat-bubble-text') : null;
-        if (textEl) {
-            textEl.innerHTML = `<span style="color:var(--emerald); font-weight:700;"><i data-lucide="unlock"></i> ${decrypted.secretMessage}</span>`;
-            btnEl.remove();
-            if (window.lucide) lucide.createIcons();
-            showToast(I18N[currentLang].toastDecrypted, 'success');
-        }
+        revealedMessagesMap[msgId] = decrypted.secretMessage;
+        await loadChatMessagesStream(true);
+        showToast(I18N[currentLang].toastDecrypted, 'success');
     } catch (e) {
-        showToast(e.message || 'Decryption failed!', 'error');
+        showToast(currentLang === 'en' ? 'Incorrect Password or Invalid Payload!' : 'كلمة السر غير صحيحة أو الرسالة ليست مشفرة بهذه الكلمة!', 'error');
     }
 }
 
