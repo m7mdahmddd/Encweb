@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="doc-title">Encweb - Secret Text Cipher & Disguise</title>
+    <meta name="description" content="Encweb is a modern Web Crypto app to encrypt secret text with AES-256 and hide it invisibly inside normal cover text.">
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600&family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="bg-mesh"></div>
+    <div class="bg-grid"></div>
+
+    <div class="container">
+        <!-- Top Navigation Bar -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                <div class="logo-icon">
+                    <i data-lucide="shield-lock"></i>
+                </div>
+                <span class="brand-name">Encweb</span>
+                <div class="status-badge">
+                    <span class="pulse-dot"></span>
+                    <span data-i18n="autoSaveBadge">Auto-Save Active</span>
+                </div>
+            </div>
+
+            <div class="nav-controls">
+                <!-- Auth User Controls -->
+                <div id="auth-nav-container">
+                    <button type="button" class="pill-btn primary-pill" id="auth-modal-btn" onclick="openAuthModal()">
+                        <i data-lucide="user"></i> <span data-i18n="navLoginBtn">Login / Register</span>
+                    </button>
+                </div>
+
+                <!-- Friends Control (Shown when logged in) -->
+                <button type="button" class="icon-btn" id="friends-nav-btn" onclick="openFriendsModal()" style="display: none;" title="Friends List">
+                    <i data-lucide="users"></i>
+                </button>
+
+                <!-- Chat Control (Shown when logged in) -->
+                <button type="button" class="icon-btn" id="chat-nav-btn" onclick="openChatModal()" style="display: none;" title="Encrypted Friends Chat">
+                    <i data-lucide="message-square"></i>
+                </button>
+
+                <div style="position: relative;">
+                    <button type="button" class="icon-btn" id="palette-toggle-btn" onclick="toggleColorPickerMenu()" title="Theme Accent Color">
+                        <i data-lucide="palette"></i>
+                    </button>
+                    <!-- Color Swatches Popover -->
+                    <div class="color-palette-popover" id="color-palette-menu" style="display: none;">
+                        <div class="palette-title" data-i18n="paletteTitle">Theme Accent Color</div>
+                        <div class="palette-swatches">
+                            <button type="button" class="swatch-btn" data-accent="indigo" style="background: linear-gradient(135deg, #6366f1, #a855f7);" onclick="setThemeAccent('indigo')" title="Indigo Violet"></button>
+                            <button type="button" class="swatch-btn" data-accent="cyan" style="background: linear-gradient(135deg, #06b6d4, #10b981);" onclick="setThemeAccent('cyan')" title="Cyber Cyan"></button>
+                            <button type="button" class="swatch-btn" data-accent="rose" style="background: linear-gradient(135deg, #f43f5e, #fb7185);" onclick="setThemeAccent('rose')" title="Neon Rose"></button>
+                            <button type="button" class="swatch-btn" data-accent="amber" style="background: linear-gradient(135deg, #f59e0b, #ea580c);" onclick="setThemeAccent('amber')" title="Sunset Amber"></button>
+                            <button type="button" class="swatch-btn" data-accent="emerald" style="background: linear-gradient(135deg, #10b981, #84cc16);" onclick="setThemeAccent('emerald')" title="Electric Emerald"></button>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="button" class="icon-btn" id="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Theme">
+                    <i data-lucide="moon"></i>
+                </button>
+
+                <button type="button" class="pill-btn lang-btn" id="lang-toggle-btn" onclick="toggleLanguage()">
+                    <i data-lucide="globe"></i> <span id="lang-btn-text">العربية</span>
+                </button>
+
+                <button type="button" class="icon-btn danger" onclick="clearSavedState()" title="Clear Draft">
+                    <i data-lucide="trash-2"></i>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Hero Title Header -->
+        <header class="hero-header">
+            <div class="hero-badge">
+                <i data-lucide="sparkles"></i>
+                <span data-i18n="heroBadge">AES-256-GCM + Steganography Engine</span>
+            </div>
+            <h1 class="hero-title" data-i18n="mainHeading">Disguise Secret Text In Plain Sight</h1>
+            <p class="hero-subtitle" data-i18n="subHeading">Encrypt your sensitive text with a password and conceal it invisibly inside everyday natural messages.</p>
+        </header>
+
+        <!-- Main Card Interface -->
+        <main class="encweb-card">
+            <!-- Navigation Tabs (4 Parallel Tabs) -->
+            <div class="tab-bar">
+                <button class="tab-item active" id="tab-encrypt-btn" onclick="switchTab('encrypt')">
+                    <i data-lucide="lock"></i>
+                    <span data-i18n="tabEncrypt">Encrypt & Disguise</span>
+                </button>
+                <button class="tab-item" id="tab-decrypt-btn" onclick="switchTab('decrypt')">
+                    <i data-lucide="key-round"></i>
+                    <span data-i18n="tabDecrypt">Reveal & Decrypt</span>
+                </button>
+                <button class="tab-item" id="tab-update-btn" onclick="switchTab('update')">
+                    <i data-lucide="edit-3"></i>
+                    <span data-i18n="tabUpdate">Update & Edit</span>
+                </button>
+                <button class="tab-item" id="tab-vault-btn" onclick="switchTab('vault')">
+                    <i data-lucide="cloud"></i>
+                    <span data-i18n="tabVault">Cloud Vault</span>
+                </button>
+            </div>
+
+            <!-- TAB 1: ENCRYPT & DISGUISE -->
+            <div class="tab-panel active" id="panel-encrypt">
+                <div class="form-group">
+                    <div class="label-row">
+                        <label class="field-label" for="secret-message">
+                            <i data-lucide="file-text"></i> <span data-i18n="secretLabel">Secret Message to Encrypt</span>
+                        </label>
+                        <span class="char-badge" id="secret-char-count">0 chars</span>
+                    </div>
+                    <textarea id="secret-message" rows="4" placeholder="Type your secret message here... (e.g. My secret key is XYZ123)" oninput="updateEncryptStats()"></textarea>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="field-label" for="encrypt-key">
+                            <i data-lucide="key"></i> <span data-i18n="keyLabel">Encryption Password (Key)</span>
+                        </label>
+                        <div class="password-box">
+                            <input type="password" id="encrypt-key" placeholder="Enter a secret key..." oninput="updateEncryptStats()">
+                            <button type="button" class="eye-btn" onclick="togglePasswordVisibility('encrypt-key', this)">
+                                <i data-lucide="eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="field-label" for="disguise-mode">
+                            <i data-lucide="sliders"></i> <span data-i18n="modeLabel">Disguise Format</span>
+                        </label>
+                        <select id="disguise-mode" onchange="handleModeChange()">
+                            <option value="stego-invisible" data-i18n="modeOptStego">🔒 Invisible Text (Steganography)</option>
+                            <option value="emoji" data-i18n="modeOptEmoji">🔮 Secret Emoji Sequence</option>
+                            <option value="hex" data-i18n="modeOptHex">⚡ Hex Ciphertext (Base 16)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Access Rights & Multi-Device Recipient Control -->
+                <div class="form-group" id="access-control-group">
+                    <div class="label-row">
+                        <label class="field-label">
+                            <i data-lucide="shield-alert"></i> <span data-i18n="accessControlLabel">Recipient Access Rights</span>
+                        </label>
+                        <span class="hint-text" data-i18n="accessControlSubInfo">Control who can decrypt this message</span>
+                    </div>
+
+                    <!-- Custom Visual Option Selector -->
+                    <div class="access-cards-grid">
+                        <div class="access-card active" id="access-card-public" data-value="public" onclick="selectAccessType('public')">
+                            <div class="access-card-icon">🌐</div>
+                            <div class="access-card-content">
+                                <div class="access-card-title" data-i18n="accessPublic">Anyone with password (Public)</div>
+                                <div class="access-card-sub">Anyone with key can decrypt</div>
+                            </div>
+                            <div class="access-card-check"><i data-lucide="check-circle-2"></i></div>
+                        </div>
+
+                        <div class="access-card" id="access-card-private" data-value="private" onclick="selectAccessType('private')">
+                            <div class="access-card-icon">🔒</div>
+                            <div class="access-card-content">
+                                <div class="access-card-title" data-i18n="accessPrivate">Only Me (Private Vault)</div>
+                                <div class="access-card-sub">Personal cloud vault storage</div>
+                            </div>
+                            <div class="access-card-check"><i data-lucide="check-circle-2"></i></div>
+                        </div>
+
+                        <div class="access-card" id="access-card-friends" data-value="friends" onclick="selectAccessType('friends')">
+                            <div class="access-card-icon">👥</div>
+                            <div class="access-card-content">
+                                <div class="access-card-title" data-i18n="accessFriends">Specific Friends Only (+ Password)</div>
+                                <div class="access-card-sub">Restricted to selected friends</div>
+                            </div>
+                            <div class="access-card-check"><i data-lucide="check-circle-2"></i></div>
+                        </div>
+                    </div>
+
+                    <select id="access-type" onchange="handleAccessTypeChange()" style="display: none;">
+                        <option value="public">public</option>
+                        <option value="private">private</option>
+                        <option value="friends">friends</option>
+                    </select>
+
+                    <!-- Friends Picker Box (Shown when 'friends' is selected) -->
+                    <div id="friends-select-wrapper" style="display: none; margin-top: 12px;" class="friends-picker-card">
+                        <label class="field-label" style="font-size: 0.85rem; margin-bottom: 8px;">
+                            <i data-lucide="user-check"></i> <span data-i18n="selectFriendsLabel">Select Friends Allowed to Decrypt:</span>
+                        </label>
+                        <div id="friends-checkbox-list" class="friends-checkbox-grid">
+                            <span style="font-size: 0.85rem; color: var(--text-dim);">Please log in and add friends to share messages with specific people.</span>
+                        </div>
+                    </div>
+
+                    <label class="toggle-card">
+                        <div class="toggle-info">
+                            <div class="toggle-title">
+                                <i data-lucide="cloud"></i>
+                                <span data-i18n="saveCloudVaultLabel">Save & Share in Encweb Cloud Vault</span>
+                            </div>
+                            <span class="toggle-sub" data-i18n="saveCloudVaultSub">Sync message across your connected devices</span>
+                        </div>
+                        <div class="toggle-switch-wrapper">
+                            <input type="checkbox" id="save-cloud-vault" checked>
+                            <span class="toggle-slider"></span>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- Cover Text Selection (For Steganography Mode) -->
+                <div class="form-group" id="cover-text-group">
+                    <div class="label-row" style="flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 12px;">
+                        <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+                            <label class="field-label" for="cover-text">
+                                <i data-lucide="ghost"></i> <span data-i18n="coverLabel">Cover Text (Public Message)</span>
+                            </label>
+                            <div class="presets-row" style="margin: 0;">
+                                <button type="button" class="preset-chip" onclick="setCoverPreset('greeting')"><span data-i18n="coverPresetGreeting">👋 Greeting</span></button>
+                                <button type="button" class="preset-chip" onclick="setCoverPreset('meeting')"><span data-i18n="coverPresetMeeting">📅 Meeting</span></button>
+                                <button type="button" class="preset-chip" onclick="setCoverPreset('recipe')"><span data-i18n="coverPresetRecipe">☕ Coffee Recipe</span></button>
+                            </div>
+                        </div>
+                        <span class="hint-text" data-i18n="coverSubInfo">Choose a preset or type custom text</span>
+                    </div>
+                    <textarea id="cover-text" rows="2" placeholder="Enter optional cover text, or leave empty for pure invisible text..." oninput="updateEncryptStats()" style="margin-top: 6px;"></textarea>
+                </div>
+
+                <button class="action-btn primary" onclick="processEncrypt()">
+                    <i data-lucide="sparkles"></i>
+                    <span data-i18n="encryptBtn">Encrypt & Disguise Text</span>
+                </button>
+
+                <!-- Encrypted Result Area -->
+                <div class="result-card" id="encrypt-result-wrapper" style="display: none;">
+                    <div class="result-head">
+                        <span class="result-label">
+                            <i data-lucide="check-circle-2"></i> <span data-i18n="encryptOutputTitle">Disguised Output Text</span>
+                        </span>
+                        <button class="copy-btn" onclick="copyToClipboard('encrypt-output-box')">
+                            <i data-lucide="copy"></i> <span data-i18n="copyBtn">Copy Text</span>
+                        </button>
+                    </div>
+                    <textarea readonly class="code-box" id="encrypt-output-box" rows="3"></textarea>
+                    <div class="metrics-row">
+                        <span class="metric-tag" id="stat-payload-size"><i data-lucide="database"></i> Payload: 0 Bytes</span>
+                        <span class="metric-tag" id="stat-security-score"><i data-lucide="shield-check"></i> AES-256-GCM</span>
+                        <span class="metric-tag" id="stat-stego-status"><i data-lucide="eye-off"></i> Invisible Payload</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: DECRYPT & REVEAL -->
+            <div class="tab-panel" id="panel-decrypt">
+                <div class="form-group">
+                    <div class="label-row">
+                        <label class="field-label" for="disguised-input">
+                            <i data-lucide="clipboard"></i> <span data-i18n="decryptInputLabel">Paste Disguised Text / Ciphertext</span>
+                        </label>
+                        <span class="hint-text" data-i18n="decryptInputSubInfo">Paste the text you received here</span>
+                    </div>
+                    <textarea id="disguised-input" rows="4" placeholder="Paste disguised message or emoji/hex ciphertext..." oninput="autoDetectPayload()"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="field-label" for="decrypt-key">
+                        <i data-lucide="key"></i> <span data-i18n="decryptKeyLabel">Decryption Password (Key)</span>
+                    </label>
+                    <div class="password-box">
+                        <input type="password" id="decrypt-key" placeholder="Enter secret password...">
+                        <button type="button" class="eye-btn" onclick="togglePasswordVisibility('decrypt-key', this)">
+                            <i data-lucide="eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <button class="action-btn primary" onclick="processDecrypt()">
+                    <i data-lucide="unlock"></i>
+                    <span data-i18n="decryptBtn">Reveal & Decrypt Message</span>
+                </button>
+
+                <!-- Decrypted Result Area -->
+                <div class="result-card revealed" id="decrypt-result-wrapper" style="display: none;">
+                    <div class="result-head">
+                        <span class="result-label success">
+                            <i data-lucide="eye"></i> <span data-i18n="decryptOutputTitle">Revealed Secret Message</span>
+                        </span>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="copy-btn edit-action-btn" onclick="editAndReencrypt()">
+                                <i data-lucide="edit-3"></i> <span data-i18n="editReencryptBtn">Edit & Re-encrypt</span>
+                            </button>
+                            <button class="copy-btn" onclick="copyToClipboard('decrypt-output-box')">
+                                <i data-lucide="copy"></i> <span data-i18n="copyBtn">Copy Message</span>
+                            </button>
+                        </div>
+                    </div>
+                    <textarea readonly class="code-box revealed" id="decrypt-output-box" rows="3"></textarea>
+                </div>
+            </div>
+
+            <!-- TAB 3: UPDATE & EDIT -->
+            <div class="tab-panel" id="panel-update">
+                <div class="form-group">
+                    <div class="label-row">
+                        <label class="field-label" for="update-disguised-input">
+                            <i data-lucide="file-code"></i> <span data-i18n="updateInputLabel">Existing Disguised Text / Ciphertext</span>
+                        </label>
+                        <span class="hint-text" data-i18n="updateInputSubInfo">Paste the text you want to edit</span>
+                    </div>
+                    <textarea id="update-disguised-input" rows="4" placeholder="Paste existing disguised message or emoji/hex ciphertext here..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="field-label" for="update-key">
+                        <i data-lucide="key"></i> <span data-i18n="updateKeyLabel">Decryption Password (Key)</span>
+                    </label>
+                    <div class="password-box">
+                        <input type="password" id="update-key" placeholder="Enter password to unlock for editing...">
+                        <button type="button" class="eye-btn" onclick="togglePasswordVisibility('update-key', this)">
+                            <i data-lucide="eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <button class="action-btn primary" onclick="processUnlockForEdit()">
+                    <i data-lucide="unlock"></i>
+                    <span data-i18n="unlockEditBtn">Unlock Message For Editing</span>
+                </button>
+
+                <!-- Editable Message Area (Appears once unlocked) -->
+                <div class="result-card" id="update-editor-wrapper" style="display: none; margin-top: 25px;">
+                    <div class="result-head">
+                        <span class="result-label success">
+                            <i data-lucide="edit-3"></i> <span data-i18n="editorLabel">Edit Secret Message</span>
+                        </span>
+                    </div>
+                    <div class="form-group">
+                        <textarea id="update-editor-text" rows="4" placeholder="Edit your secret message here..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="field-label" for="update-new-key">
+                            <i data-lucide="key-round"></i> <span data-i18n="newKeyLabel">New Encryption Password (Optional - leave empty to keep current)</span>
+                        </label>
+                        <div class="password-box">
+                            <input type="password" id="update-new-key" placeholder="Enter new password (optional)...">
+                            <button type="button" class="eye-btn" onclick="togglePasswordVisibility('update-new-key', this)">
+                                <i data-lucide="eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button class="action-btn primary" onclick="processSaveUpdatedMessage()">
+                        <i data-lucide="sparkles"></i>
+                        <span data-i18n="saveUpdatedBtn">Re-encrypt & Save Updated Message</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- TAB 4: CLOUD VAULT & SHARED INBOX -->
+            <div class="tab-panel" id="panel-vault">
+                <div class="label-row" style="margin-bottom: 16px;">
+                    <label class="field-label" style="font-size: 1.1rem;">
+                        <i data-lucide="cloud"></i> <span data-i18n="vaultTitle">Encweb Cloud Vault & Shared Inbox</span>
+                    </label>
+                    <button type="button" class="copy-btn" onclick="refreshCloudVault()">
+                        <i data-lucide="refresh-cw"></i> <span data-i18n="refreshVaultBtn">Refresh Vault</span>
+                    </button>
+                </div>
+                <div id="vault-messages-list" class="vault-list-grid">
+                    <div class="empty-state">
+                        <i data-lucide="inbox" style="width: 44px; height: 44px; opacity: 0.4;"></i>
+                        <p data-i18n="emptyVaultMsg">Log in to view messages shared with you across devices!</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="encweb-footer">
+            <span data-i18n="footerText">Encweb — Advanced Secret Text Disguise & Cipher Tool</span>
+        </footer>
+    </div>
+
+    <!-- AUTH MODAL -->
+    <div class="modal-backdrop" id="auth-modal" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-head">
+                <h3><i data-lucide="shield-check"></i> <span data-i18n="authModalTitle">Account Authentication</span></h3>
+                <button type="button" class="close-btn" onclick="closeAuthModal()">&times;</button>
+            </div>
+            <div class="modal-tabs">
+                <button type="button" class="modal-tab-item active" id="modal-tab-login" onclick="switchAuthTab('login')">Login</button>
+                <button type="button" class="modal-tab-item" id="modal-tab-signup" onclick="switchAuthTab('signup')">Sign Up</button>
+            </div>
+
+            <form id="auth-form" onsubmit="handleAuthSubmit(event)">
+                <div class="form-group" id="username-group" style="display: none;">
+                    <label class="field-label">Username</label>
+                    <input type="text" id="auth-username" placeholder="Choose a unique username...">
+                </div>
+                <div class="form-group">
+                    <label class="field-label">Email Address</label>
+                    <input type="email" id="auth-email" required placeholder="name@example.com">
+                </div>
+                <div class="form-group">
+                    <label class="field-label">Password</label>
+                    <div class="password-box">
+                        <input type="password" id="auth-password" required placeholder="Enter password...">
+                        <button type="button" class="eye-btn" onclick="togglePasswordVisibility('auth-password', this)">
+                            <i data-lucide="eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" class="action-btn primary" id="auth-submit-btn">Login to Encweb</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- FRIENDS MODAL -->
+    <div class="modal-backdrop" id="friends-modal" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-head">
+                <h3><i data-lucide="users"></i> <span data-i18n="friendsModalTitle">Manage Friends & Sharing</span></h3>
+                <button type="button" class="close-btn" onclick="closeFriendsModal()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label class="field-label">Search Users by Username or Email</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="friend-search-input" placeholder="Type username or email..." oninput="handleFriendSearch()">
+                </div>
+            </div>
+            <div id="friend-search-results" class="search-results-list"></div>
+
+            <hr class="modal-divider">
+
+            <div class="form-group">
+                <label class="field-label"><i data-lucide="user-check"></i> My Friends List</label>
+                <div id="my-friends-list" class="friends-list-container">
+                    <span style="font-size: 0.85rem; color: var(--text-dim);">No friends added yet.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ACCOUNT MANAGEMENT MODAL -->
+    <div class="modal-backdrop" id="account-modal" style="display: none;">
+        <div class="modal-card account-modal-card">
+            <div class="modal-head">
+                <h3><i data-lucide="shield-check"></i> <span data-i18n="accountModalTitle">Account & Security</span></h3>
+                <button type="button" class="close-btn" onclick="closeAccountModal()">&times;</button>
+            </div>
+
+            <!-- Profile Hero Banner -->
+            <div class="account-hero-banner">
+                <div class="profile-avatar-wrapper">
+                    <div class="profile-avatar-large">
+                        <i data-lucide="user"></i>
+                    </div>
+                    <span class="avatar-status-dot" title="Active"></span>
+                </div>
+                <div class="profile-hero-info">
+                    <h4 id="account-display-username">Username</h4>
+                    <p id="account-display-email">email@example.com</p>
+                    <div class="profile-tags-row">
+                        <span class="status-chip success"><i data-lucide="shield-check"></i> Encweb Pro User</span>
+                        <span class="status-chip badge-neutral"><i data-lucide="lock"></i> E2E Encrypted</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Account Grid Section -->
+            <div class="account-body-grid">
+                <!-- Change Password Box -->
+                <div class="account-card-section">
+                    <h4 class="card-section-title"><i data-lucide="key-round"></i> <span data-i18n="changePasswordHeading">Change Account Password</span></h4>
+                    <form id="change-password-form" onsubmit="handlePasswordChange(event)">
+                        <div class="form-group" style="margin-top: 10px;">
+                            <label class="field-label" data-i18n="newPasswordLabel">New Password</label>
+                            <div class="password-box">
+                                <input type="password" id="account-new-pass" required placeholder="Enter new password (min 6 chars)...">
+                                <button type="button" class="eye-btn" onclick="togglePasswordVisibility('account-new-pass', this)">
+                                    <i data-lucide="eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <button type="submit" class="action-btn primary" style="margin-top: 12px;">
+                            <i data-lucide="refresh-cw"></i> <span data-i18n="updatePasswordBtn">Update Password</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Session & Actions Box -->
+                <div class="account-card-section">
+                    <h4 class="card-section-title"><i data-lucide="log-out"></i> <span data-i18n="sessionHeading">Account Session</span></h4>
+                    <p class="section-desc">Logout of your active session on this device.</p>
+                    <button type="button" class="action-btn outline" onclick="SupabaseAuth.signOut(); closeAccountModal();" style="margin-top: 12px;">
+                        <i data-lucide="log-out"></i> <span data-i18n="logoutBtn">Logout Account</span>
+                    </button>
+                </div>
+
+                <!-- Delete Account Danger Zone Box -->
+                <div class="account-card-section danger-section" style="border: 1px dashed rgba(239, 68, 68, 0.4);">
+                    <h4 class="card-section-title danger-text"><i data-lucide="trash-2"></i> <span data-i18n="deleteAccountHeading">Danger Zone</span></h4>
+                    <p class="section-desc" data-i18n="deleteAccountDesc">Permanently delete your account profile, friends list, and cloud messages.</p>
+                    
+                    <div id="delete-confirm-box" style="display: none; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); padding: 12px; border-radius: 12px; margin-top: 10px;">
+                        <p style="font-size: 0.8rem; color: var(--rose); font-weight: 700; margin-bottom: 8px;">
+                            ⚠️ Are you 100% sure? All your data, friends list & messages will be wiped!
+                        </p>
+                        <div style="display: flex; gap: 8px;">
+                            <button type="button" class="action-btn danger" onclick="confirmDeleteAccountFinal()" style="background: #dc2626; flex: 1; padding: 8px 10px; font-size: 0.8rem;">
+                                <i data-lucide="check"></i> Yes, Delete
+                            </button>
+                            <button type="button" class="action-btn outline" onclick="cancelDeleteAccountPrompt()" style="flex: 1; padding: 8px 10px; font-size: 0.8rem;">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="button" class="action-btn danger" id="show-delete-confirm-btn" onclick="showDeleteAccountPrompt()" style="margin-top: 12px; background: #dc2626;">
+                        <i data-lucide="user-x"></i> <span data-i18n="deleteAccountBtn">Delete Account Permanently</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FRIENDS ENCRYPTED CHAT MODAL -->
+    <div class="modal-backdrop" id="chat-modal" style="display: none;">
+        <div class="modal-card chat-modal-card">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <div class="modal-icon">
+                        <i data-lucide="message-square"></i>
+                    </div>
+                    <div>
+                        <h3 class="modal-title" data-i18n="chatModalTitle">Friends Encrypted Chat</h3>
+                        <p class="modal-subtitle" data-i18n="chatModalSub">End-to-End Encrypted Direct Messages & Steganography</p>
+                    </div>
+                </div>
+                <button type="button" class="close-modal-btn" onclick="closeChatModal()">&times;</button>
+            </div>
+
+            <div class="chat-layout">
+                <!-- Left Sidebar: Friends List -->
+                <div class="chat-sidebar">
+                    <div class="sidebar-header">
+                        <span class="sidebar-title" data-i18n="friendsListTitle">Friends</span>
+                        <button type="button" class="icon-btn-sm" onclick="loadChatFriendsList()" title="Refresh">
+                            <i data-lucide="refresh-cw"></i>
+                        </button>
+                    </div>
+                    <div class="chat-friends-list" id="chat-friends-list">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Right Window: Active Chat Stream -->
+                <div class="chat-window">
+                    <div class="chat-header-bar" id="chat-active-header">
+                        <div class="active-user-info">
+                            <div class="user-avatar-sm" id="chat-active-avatar">?</div>
+                            <div>
+                                <div class="active-username" id="chat-active-name">Select a Friend</div>
+                                <div class="e2ee-badge"><i data-lucide="shield-check"></i> AES-256 E2EE Encrypted</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chat-messages-container" id="chat-messages-container">
+                        <div class="chat-empty-state">
+                            <i data-lucide="message-square-plus"></i>
+                            <p data-i18n="chatSelectPrompt">Select a friend on the left to start end-to-end encrypted messaging!</p>
+                        </div>
+                    </div>
+
+                    <form class="chat-input-bar" id="chat-form" onsubmit="handleSendChatMessage(event)">
+                        <input type="text" id="chat-input-text" class="chat-input-field" placeholder="Type a message..." autocomplete="off" disabled>
+                        <button type="submit" class="pill-btn primary-pill chat-send-btn" id="chat-submit-btn" disabled>
+                            <i data-lucide="send"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-stack" id="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="crypto-engine.js"></script>
+    <script src="supabase-client.js"></script>
+    <script src="app.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
