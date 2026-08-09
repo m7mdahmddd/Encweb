@@ -1914,8 +1914,24 @@ hr.modal-divider {
     gap: 3px;
     font-size: 0.65rem;
     background: rgba(255, 255, 255, 0.2);
-    padding: 1px 6px;
+    padding: 2px 8px;
     border-radius: 10px;
+    border: none;
+    color: inherit;
+    font-family: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.stego-chip:hover {
+    background: rgba(255, 255, 255, 0.35);
+    transform: translateY(-1px);
+}
+
+.stego-chip.revealed-chip {
+    background: rgba(16, 185, 129, 0.25);
+    color: var(--emerald);
 }
 
 .chat-input-bar {

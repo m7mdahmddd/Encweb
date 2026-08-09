@@ -599,6 +599,43 @@
         </div>
     </div>
 
+    <!-- Stego Key Decryption Prompt Modal -->
+    <div class="modal-backdrop" id="stego-decrypt-modal" style="display: none;">
+        <div class="modal-card" style="max-width: 420px; padding: 0; overflow: hidden;">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <div class="modal-icon" style="background: rgba(99, 102, 241, 0.15); border-color: var(--primary);">
+                        <i data-lucide="key-round"></i>
+                    </div>
+                    <div>
+                        <div class="modal-title" data-i18n="stegoModalTitle">Decrypt Secret Message</div>
+                        <div class="modal-subtitle" data-i18n="stegoModalSub">Enter password to reveal hidden content</div>
+                    </div>
+                </div>
+                <button type="button" class="close-modal-btn" onclick="closeStegoDecryptModal(null)">&times;</button>
+            </div>
+            <div style="padding: 20px;">
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label class="field-label" for="stego-key-input" style="margin-bottom: 8px;">
+                        <i data-lucide="lock"></i> <span data-i18n="stegoKeyLabel">Decryption Key Password</span>
+                    </label>
+                    <div class="password-box">
+                        <input type="password" id="stego-key-input" placeholder="Enter password..." autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();submitStegoDecryptModal();}">
+                        <button type="button" class="eye-btn" onclick="togglePasswordVisibility('stego-key-input', this)">
+                            <i data-lucide="eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" class="preset-chip" style="padding: 10px 18px;" onclick="closeStegoDecryptModal(null)" data-i18n="cancelBtn">Cancel</button>
+                    <button type="button" class="action-btn primary" style="width: auto; padding: 10px 22px; margin-top: 0;" onclick="submitStegoDecryptModal()">
+                        <i data-lucide="unlock"></i> <span data-i18n="decryptRevealBtn">Decrypt & Reveal</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Notifications -->
     <div class="toast-stack" id="toast-container"></div>
 

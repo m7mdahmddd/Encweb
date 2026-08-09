@@ -102,7 +102,12 @@ const I18N = {
         deleteAccountHeading: "Danger Zone",
         deleteAccountDesc: "Permanently delete your account profile, friends list, and cloud messages.",
         deleteAccountBtn: "Delete Account Permanently",
-        toastAccountDeleted: "Your account and profile data have been deleted successfully."
+        toastAccountDeleted: "Your account and profile data have been deleted successfully.",
+        stegoModalTitle: "Decrypt Secret Message",
+        stegoModalSub: "Enter password to reveal hidden content",
+        stegoKeyLabel: "Decryption Key Password",
+        cancelBtn: "Cancel",
+        decryptRevealBtn: "Decrypt & Reveal"
     },
     ar: {
         pageTitle: "Encweb - تشفير وإخفاء النصوص",
@@ -1500,8 +1505,9 @@ async function loadChatMessagesStream(silent = false) {
                         ${revealedSecret ? `<span style="color:var(--emerald); font-weight:700;"><i data-lucide="unlock"></i> ${revealedSecret}</span>` : rawText}
                     </div>
                     <div class="chat-bubble-meta">
-                        ${isStego ? `<span class="stego-chip"><i data-lucide="eye-off"></i> Stego</span>` : ''}
-                        ${isStego && !revealedSecret ? `<button type="button" class="reveal-btn-sm" onclick="revealChatStegoMessage(this, '${msg.id}', '${encodeURIComponent(rawText)}')"><i data-lucide="unlock"></i> Reveal</button>` : ''}
+                        ${isStego ? `<button type="button" class="stego-chip ${revealedSecret ? 'revealed-chip' : ''}" onclick="toggleChatStegoMessage('${msg.id}', '${encodeURIComponent(rawText)}')"><i data-lucide="${revealedSecret ? 'unlock' : 'eye-off'}"></i> ${revealedSecret ? (currentLang === 'en' ? 'Revealed' : 'مكشوفة') : 'Stego'}</button>` : ''}
+                        ${isStego && !revealedSecret ? `<button type="button" class="reveal-btn-sm" onclick="revealChatStegoMessage(this, '${msg.id}', '${encodeURIComponent(rawText)}')"><i data-lucide="unlock"></i> ${currentLang === 'en' ? 'Reveal' : 'كشف'}</button>` : ''}
+                        ${isStego && revealedSecret ? `<button type="button" class="reveal-btn-sm" onclick="hideChatStegoMessage('${msg.id}')"><i data-lucide="lock"></i> ${currentLang === 'en' ? 'Hide' : 'إخفاء'}</button>` : ''}
                         <span>${timeStr}</span>
                     </div>
                 </div>
@@ -1513,11 +1519,54 @@ async function loadChatMessagesStream(silent = false) {
     container.scrollTop = container.scrollHeight;
 }
 
+async function toggleChatStegoMessage(msgId, encodedPayload) {
+    if (revealedMessagesMap[msgId]) {
+        await hideChatStegoMessage(msgId);
+    } else {
+        await revealChatStegoMessage(null, msgId, encodedPayload);
+    }
+}
+
+async function hideChatStegoMessage(msgId) {
+    delete revealedMessagesMap[msgId];
+    await loadChatMessagesStream(true);
+    showToast(currentLang === 'en' ? 'Message hidden & locked 🔒' : 'تم إخفاء الرسالة وإعادة قفلها 🔒', 'info');
+}
+
+let stegoModalResolver = null;
+
+function promptStegoDecryptPassword() {
+    return new Promise((resolve) => {
+        stegoModalResolver = resolve;
+        const modal = document.getElementById('stego-decrypt-modal');
+        const input = document.getElementById('stego-key-input');
+        if (input) {
+            input.value = '';
+            setTimeout(() => input.focus(), 150);
+        }
+        if (modal) modal.style.display = 'flex';
+        if (window.lucide) lucide.createIcons();
+    });
+}
+
+function closeStegoDecryptModal(val = null) {
+    const modal = document.getElementById('stego-decrypt-modal');
+    if (modal) modal.style.display = 'none';
+    if (stegoModalResolver) {
+        stegoModalResolver(val);
+        stegoModalResolver = null;
+    }
+}
+
+function submitStegoDecryptModal() {
+    const input = document.getElementById('stego-key-input');
+    const val = input ? input.value : null;
+    closeStegoDecryptModal(val);
+}
+
 async function revealChatStegoMessage(btnEl, msgId, encodedPayload) {
     const payload = decodeURIComponent(encodedPayload);
-    const pass = prompt(
-        currentLang === 'en' ? 'Enter decryption key used for this secret message:' : 'أدخل كلمة السر التشفيرية التي استُخدمت لتشفير هذه الرسالة:'
-    );
+    const pass = await promptStegoDecryptPassword();
     if (!pass) return;
 
     try {
