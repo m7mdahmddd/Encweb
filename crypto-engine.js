@@ -103,6 +103,24 @@ const CryptoEngine = {
     },
 
     /**
+     * High-level async decrypt helper for any disguised text (stego, hex, or emoji)
+     */
+    async decrypt(disguisedText, password) {
+        if (!disguisedText) throw new Error('نص تالف أو فارغ.');
+
+        let bytes = null;
+        if (this.hasHiddenPayload(disguisedText)) {
+            bytes = this.zeroWidthToBytes(disguisedText);
+        } else if (/^[0-9a-fA-F]+$/.test(disguisedText.trim())) {
+            bytes = this.hexToBytes(disguisedText.trim());
+        } else {
+            bytes = this.emojiToBytes(disguisedText.trim());
+        }
+
+        return await this.decryptBytes(bytes, password);
+    },
+
+    /**
      * Converts byte array to zero-width invisible character string
      */
     bytesToZeroWidth(bytes) {

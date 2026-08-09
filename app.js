@@ -1521,8 +1521,8 @@ async function revealChatStegoMessage(btnEl, msgId, encodedPayload) {
     if (!pass) return;
 
     try {
-        const decrypted = CryptoEngine.decrypt(payload, pass);
-        revealedMessagesMap[msgId] = decrypted.secretMessage;
+        const decryptedText = await CryptoEngine.decrypt(payload, pass);
+        revealedMessagesMap[msgId] = decryptedText;
         await loadChatMessagesStream(true);
         showToast(I18N[currentLang].toastDecrypted, 'success');
     } catch (e) {
