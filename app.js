@@ -138,7 +138,8 @@ const I18N = {
         stegoKeyLabel: "Decryption Key Password",
         cancelBtn: "Cancel",
         decryptRevealBtn: "Decrypt & Reveal",
-        clearChatBtn: "Clear Chat"
+        clearChatBtn: "Clear Chat",
+        deleteAllVaultBtn: "Delete All"
     },
     ar: {
         pageTitle: "Encweb - تشفير وإخفاء النصوص",
@@ -1091,13 +1092,40 @@ async function refreshCloudVault() {
             <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; font-style: italic;">
                 "${m.cover_text || 'Invisible payload message'}"
             </p>
-            <button type="button" class="copy-btn" onclick="loadVaultMessageToDecrypt('${encodeURIComponent(m.disguised_payload)}')">
-                <i data-lucide="unlock"></i> ${currentLang === 'en' ? 'Load & Decrypt' : 'تحميل وفك التشفير'}
-            </button>
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <button type="button" class="copy-btn" onclick="loadVaultMessageToDecrypt('${encodeURIComponent(m.disguised_payload)}')">
+                    <i data-lucide="unlock"></i> ${currentLang === 'en' ? 'Load & Decrypt' : 'تحميل وفك التشفير'}
+                </button>
+                <button type="button" class="clear-chat-btn" onclick="deleteSingleVaultMessage('${m.id}')" title="Delete Message">
+                    <i data-lucide="trash-2"></i> ${currentLang === 'en' ? 'Delete' : 'حذف'}
+                </button>
+            </div>
         </div>
     `).join('');
 
     if (window.lucide) lucide.createIcons();
+}
+
+async function deleteSingleVaultMessage(msgId) {
+    if (!msgId) return;
+    try {
+        await SupabaseVault.deleteCloudMessage(msgId);
+        await refreshCloudVault();
+        showToast(currentLang === 'en' ? 'Vault message deleted! 🗑️' : 'تم حذف الرسالة من الخزنة! 🗑️', 'info');
+    } catch (e) {
+        showToast(e.message || 'Failed to delete message.', 'error');
+    }
+}
+
+async function deleteAllCloudVaultMessages() {
+    if (!SupabaseAuth.currentUser) return;
+    try {
+        await SupabaseVault.deleteAllCloudMessages();
+        await refreshCloudVault();
+        showToast(currentLang === 'en' ? 'All vault messages deleted! 🧹' : 'تم مسح جميع رسائل الخزنة بنجاح! 🧹', 'info');
+    } catch (e) {
+        showToast(e.message || 'Failed to delete vault messages.', 'error');
+    }
 }
 
 function loadVaultMessageToDecrypt(encodedPayload) {

@@ -61,6 +61,12 @@ FOR SELECT USING (
 CREATE POLICY "Authenticated users can insert secret messages" ON public.secret_messages 
 FOR INSERT WITH CHECK (auth.uid() = sender_id);
 
+CREATE POLICY "Users can delete secret messages" ON public.secret_messages 
+FOR DELETE USING (
+    auth.uid() = sender_id 
+    OR auth.uid() = ANY(recipient_ids)
+);
+
 -- 4. Create RPC Function to Permanently Delete User Account from Auth & Tables
 DROP FUNCTION IF EXISTS public.delete_user_account();
 DROP FUNCTION IF EXISTS public.delete_user_account(uuid);

@@ -372,13 +372,18 @@
 
             <!-- TAB 4: CLOUD VAULT & SHARED INBOX -->
             <div class="tab-panel" id="panel-vault">
-                <div class="label-row" style="margin-bottom: 16px;">
+                <div class="label-row" style="margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
                     <label class="field-label" style="font-size: 1.1rem;">
                         <i data-lucide="cloud"></i> <span data-i18n="vaultTitle">Encweb Cloud Vault & Shared Inbox</span>
                     </label>
-                    <button type="button" class="copy-btn" onclick="refreshCloudVault()">
-                        <i data-lucide="refresh-cw"></i> <span data-i18n="refreshVaultBtn">Refresh Vault</span>
-                    </button>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <button type="button" class="copy-btn" onclick="refreshCloudVault()">
+                            <i data-lucide="refresh-cw"></i> <span data-i18n="refreshVaultBtn">Refresh Vault</span>
+                        </button>
+                        <button type="button" class="clear-chat-btn" onclick="deleteAllCloudVaultMessages()" title="Delete All Vault Messages">
+                            <i data-lucide="trash-2"></i> <span data-i18n="deleteAllVaultBtn">Delete All</span>
+                        </button>
+                    </div>
                 </div>
                 <div id="vault-messages-list" class="vault-list-grid">
                     <div class="empty-state">

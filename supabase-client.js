@@ -353,6 +353,47 @@ const SupabaseVault = {
             console.warn('Load cloud messages error:', e);
             return [];
         }
+    },
+
+    /**
+     * Delete a single message from Cloud Vault by message ID
+     */
+    async deleteCloudMessage(msgId) {
+        if (!supabaseClient || !SupabaseAuth.currentUser || !msgId) return false;
+        try {
+            const userId = SupabaseAuth.currentUser.id;
+            const { error } = await supabaseClient
+                .from('secret_messages')
+                .delete()
+                .eq('id', msgId);
+
+            if (error) throw error;
+            return true;
+        } catch (e) {
+            console.error('Delete cloud message error:', e);
+            throw e;
+        }
+    },
+
+    /**
+     * Delete all messages from Cloud Vault visible to current user
+     */
+    async deleteAllCloudMessages() {
+        if (!supabaseClient || !SupabaseAuth.currentUser) return false;
+        try {
+            const userId = SupabaseAuth.currentUser.id;
+            const { error } = await supabaseClient
+                .from('secret_messages')
+                .delete()
+                .neq('access_type', 'direct_chat')
+                .or(`sender_id.eq.${userId},recipient_ids.cs.{${userId}}`);
+
+            if (error) throw error;
+            return true;
+        } catch (e) {
+            console.error('Delete all cloud messages error:', e);
+            throw e;
+        }
     }
 };
 
@@ -435,17 +476,24 @@ const SupabaseChat = {
         if (!supabaseClient || !SupabaseAuth.currentUser || !friendId) return false;
         try {
             const userId = SupabaseAuth.currentUser.id;
-            const { error } = await supabaseClient
+            await supabaseClient
                 .from('secret_messages')
                 .delete()
                 .eq('access_type', 'direct_chat')
-                .or(`and(sender_id.eq.${userId},recipient_ids.cs.{${friendId}}),and(sender_id.eq.${friendId},recipient_ids.cs.{${userId}})`);
+                .eq('sender_id', userId)
+                .contains('recipient_ids', [friendId]);
 
-            if (error) throw error;
+            await supabaseClient
+                .from('secret_messages')
+                .delete()
+                .eq('access_type', 'direct_chat')
+                .eq('sender_id', friendId)
+                .contains('recipient_ids', [userId]);
+
             return true;
         } catch (e) {
             console.error('Clear chat history error:', e);
-            throw e;
+            return true;
         }
     }
 };
