@@ -5,7 +5,7 @@
  */
 
 // Safe Fallback for Supabase Objects in case supabase-client.js fails to load
-if (typeof SupabaseAuth === 'undefined') {
+if (typeof window.SupabaseAuth === 'undefined') {
     window.SupabaseAuth = {
         currentUser: null,
         currentProfile: null,
@@ -18,14 +18,14 @@ if (typeof SupabaseAuth === 'undefined') {
         deleteAccount: async () => {}
     };
 }
-if (typeof SupabaseFriends === 'undefined') {
+if (typeof window.SupabaseFriends === 'undefined') {
     window.SupabaseFriends = {
         getFriends: async () => [],
         searchUsers: async () => [],
         addFriend: async () => {}
     };
 }
-if (typeof SupabaseChat === 'undefined') {
+if (typeof window.SupabaseChat === 'undefined') {
     window.SupabaseChat = {
         sendMessage: async () => {},
         loadChatMessages: async () => [],

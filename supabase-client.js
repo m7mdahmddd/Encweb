@@ -447,3 +447,7 @@ const SupabaseChat = {
         }
     }
 };
+
+window.SupabaseAuth = SupabaseAuth;
+window.SupabaseFriends = SupabaseFriends;
+window.SupabaseChat = SupabaseChat;
