@@ -426,5 +426,24 @@ const SupabaseChat = {
         } catch (e) {
             return 0;
         }
+    /**
+     * Clear all chat messages between current user and friendId
+     */
+    async clearChatHistory(friendId) {
+        if (!supabaseClient || !SupabaseAuth.currentUser || !friendId) return false;
+        try {
+            const userId = SupabaseAuth.currentUser.id;
+            const { error } = await supabaseClient
+                .from('secret_messages')
+                .delete()
+                .eq('access_type', 'direct_chat')
+                .or(`and(sender_id.eq.${userId},recipient_ids.cs.{${friendId}}),and(sender_id.eq.${friendId},recipient_ids.cs.{${userId}})`);
+
+            if (error) throw error;
+            return true;
+        } catch (e) {
+            console.error('Clear chat history error:', e);
+            throw e;
+        }
     }
 };

@@ -107,7 +107,8 @@ const I18N = {
         stegoModalSub: "Enter password to reveal hidden content",
         stegoKeyLabel: "Decryption Key Password",
         cancelBtn: "Cancel",
-        decryptRevealBtn: "Decrypt & Reveal"
+        decryptRevealBtn: "Decrypt & Reveal",
+        clearChatBtn: "Clear Chat"
     },
     ar: {
         pageTitle: "Encweb - تشفير وإخفاء النصوص",
@@ -1411,6 +1412,7 @@ async function selectChatFriend(friendId, friendUsername) {
     const activeHeaderAvatar = document.getElementById('chat-active-avatar');
     const inputField = document.getElementById('chat-input-text');
     const submitBtn = document.getElementById('chat-submit-btn');
+    const clearBtn = document.getElementById('clear-chat-btn');
 
     if (activeHeaderName) activeHeaderName.textContent = friendUsername;
     if (activeHeaderAvatar) activeHeaderAvatar.textContent = friendUsername.charAt(0).toUpperCase();
@@ -1420,9 +1422,31 @@ async function selectChatFriend(friendId, friendUsername) {
         inputField.focus();
     }
     if (submitBtn) submitBtn.disabled = false;
+    if (clearBtn) clearBtn.style.display = 'inline-flex';
 
     await loadChatFriendsList();
     await loadChatMessagesStream();
+}
+
+async function clearActiveChatMessages() {
+    if (!activeChatFriendId) return;
+
+    const confirmMsg = currentLang === 'en'
+        ? `Are you sure you want to delete all chat history with ${activeChatFriendName}?`
+        : `هل أنت تأكد من رغبتك في مسح جميع رسائل المحادثة مع ${activeChatFriendName}؟`;
+
+    if (!confirm(confirmMsg)) return;
+
+    try {
+        await SupabaseChat.clearChatHistory(activeChatFriendId);
+        for (let key in revealedMessagesMap) {
+            delete revealedMessagesMap[key];
+        }
+        await loadChatMessagesStream(true);
+        showToast(currentLang === 'en' ? 'Chat history cleared successfully! 🧹' : 'تم مسح المحادثة بنجاح! 🧹', 'info');
+    } catch (e) {
+        showToast(e.message || 'Failed to clear chat history.', 'error');
+    }
 }
 
 let chatEncryptMode = false;
