@@ -2066,3 +2066,143 @@ hr.modal-divider {
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
+
+/* Friends Modal Sub Navigation & Tabs */
+.friends-sub-nav {
+    display: flex;
+    gap: 6px;
+    padding: 10px 16px;
+    background: rgba(15, 23, 42, 0.03);
+    border-bottom: 1px solid var(--bg-card-border);
+    overflow-x: auto;
+}
+
+[data-theme="dark"] .friends-sub-nav {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.friends-nav-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 12px;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 0.84rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.friends-nav-tab:hover {
+    color: var(--text-main);
+    background: var(--bg-card-border);
+}
+
+.friends-nav-tab.active {
+    color: var(--primary);
+    background: rgba(99, 102, 241, 0.12);
+    font-weight: 700;
+}
+
+.req-badge-count {
+    background: #ef4444;
+    color: #ffffff;
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 1px 6px;
+    border-radius: 10px;
+    min-width: 16px;
+    text-align: center;
+}
+
+/* User Card Items in Friends Modal */
+.user-card-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    background: var(--bg-input);
+    border: 1px solid var(--bg-card-border);
+    border-radius: 14px;
+    margin-bottom: 10px;
+    transition: all 0.2s ease;
+}
+
+.user-card-item:hover {
+    border-color: var(--primary);
+    transform: translateY(-1px);
+}
+
+.user-card-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.user-card-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.user-card-name {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.user-card-email {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+.user-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-action-xs {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    border-radius: 10px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    font-family: inherit;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-action-xs.primary {
+    background: var(--primary);
+    color: #ffffff;
+}
+
+.btn-action-xs.success {
+    background: #10b981;
+    color: #ffffff;
+}
+
+.btn-action-xs.secondary {
+    background: var(--bg-card-border);
+    color: var(--text-main);
+}
+
+.btn-action-xs.danger {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.25);
+}
+
+.btn-action-xs.danger:hover {
+    background: #ef4444;
+    color: #ffffff;
+}

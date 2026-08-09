@@ -435,27 +435,64 @@
         </div>
     </div>
 
-    <!-- FRIENDS MODAL -->
+    <!-- FRIENDS & NETWORK MANAGEMENT MODAL -->
     <div class="modal-backdrop" id="friends-modal" style="display: none;">
-        <div class="modal-card">
-            <div class="modal-head">
-                <h3><i data-lucide="users"></i> <span data-i18n="friendsModalTitle">Manage Friends & Sharing</span></h3>
-                <button type="button" class="close-btn" onclick="closeFriendsModal()">&times;</button>
-            </div>
-            <div class="form-group">
-                <label class="field-label">Search Users by Username or Email</label>
-                <div style="display: flex; gap: 8px;">
-                    <input type="text" id="friend-search-input" placeholder="Type username or email..." oninput="handleFriendSearch()">
+        <div class="modal-card" style="max-width: 520px; padding: 0; overflow: hidden;">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <div class="modal-icon" style="background: rgba(99, 102, 241, 0.15); border-color: var(--primary);">
+                        <i data-lucide="users"></i>
+                    </div>
+                    <div>
+                        <div class="modal-title" data-i18n="friendsModalTitle">Manage Friends & Network</div>
+                        <div class="modal-subtitle">Add friends, respond to requests & manage blocklist</div>
+                    </div>
                 </div>
+                <button type="button" class="close-modal-btn" onclick="closeFriendsModal()">&times;</button>
             </div>
-            <div id="friend-search-results" class="search-results-list"></div>
 
-            <hr class="modal-divider">
+            <!-- Tab Sub-Navigation inside Friends Modal -->
+            <div class="friends-sub-nav">
+                <button type="button" class="friends-nav-tab active" id="friends-tab-list" onclick="switchFriendsTab('list')">
+                    <i data-lucide="user-check"></i> <span>Friends</span>
+                </button>
+                <button type="button" class="friends-nav-tab" id="friends-tab-requests" onclick="switchFriendsTab('requests')">
+                    <i data-lucide="user-plus"></i> <span>Requests</span>
+                    <span class="req-badge-count" id="friends-req-count" style="display: none;">0</span>
+                </button>
+                <button type="button" class="friends-nav-tab" id="friends-tab-search" onclick="switchFriendsTab('search')">
+                    <i data-lucide="user-search"></i> <span>Add Friends</span>
+                </button>
+                <button type="button" class="friends-nav-tab" id="friends-tab-blocked" onclick="switchFriendsTab('blocked')">
+                    <i data-lucide="user-x"></i> <span>Blocked</span>
+                </button>
+            </div>
 
-            <div class="form-group">
-                <label class="field-label"><i data-lucide="user-check"></i> My Friends List</label>
-                <div id="my-friends-list" class="friends-list-container">
-                    <span style="font-size: 0.85rem; color: var(--text-dim);">No friends added yet.</span>
+            <div style="padding: 20px;">
+                <!-- Tab Panel 1: Friends List -->
+                <div class="friends-tab-panel" id="friends-panel-list">
+                    <div id="my-friends-list" class="friends-list-container"></div>
+                </div>
+
+                <!-- Tab Panel 2: Incoming Requests -->
+                <div class="friends-tab-panel" id="friends-panel-requests" style="display: none;">
+                    <div id="incoming-requests-list" class="friends-list-container"></div>
+                </div>
+
+                <!-- Tab Panel 3: Search & Add -->
+                <div class="friends-tab-panel" id="friends-panel-search" style="display: none;">
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <div class="password-box">
+                            <input type="text" id="friend-search-input" placeholder="Type username or email..." oninput="handleFriendSearch()">
+                            <span class="eye-btn" style="pointer-events: none;"><i data-lucide="search"></i></span>
+                        </div>
+                    </div>
+                    <div id="friend-search-results" class="search-results-list"></div>
+                </div>
+
+                <!-- Tab Panel 4: Blocked Users -->
+                <div class="friends-tab-panel" id="friends-panel-blocked" style="display: none;">
+                    <div id="blocked-users-list" class="friends-list-container"></div>
                 </div>
             </div>
         </div>

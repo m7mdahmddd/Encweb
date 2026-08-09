@@ -255,39 +255,107 @@ const SupabaseFriends = {
         }
     },
 
-    /**
-     * Add friend by user ID
-     */
-    async addFriend(friendId) {
+    async sendFriendRequest(friendId) {
         if (!supabaseClient || !SupabaseAuth.currentUser) throw new Error('Must be logged in.');
+        const userId = SupabaseAuth.currentUser.id;
 
         const { data, error } = await supabaseClient
             .from('friends')
             .insert([
-                { user_id: SupabaseAuth.currentUser.id, friend_id: friendId, status: 'accepted' }
+                { user_id: userId, friend_id: friendId, status: 'pending' }
             ]);
 
         if (error && !error.message.includes('duplicate key')) throw error;
         return true;
     },
 
-    /**
-     * Get accepted friends list for current user
-     */
+    async acceptFriendRequest(senderId) {
+        if (!supabaseClient || !SupabaseAuth.currentUser) return false;
+        const userId = SupabaseAuth.currentUser.id;
+
+        await supabaseClient
+            .from('friends')
+            .update({ status: 'accepted' })
+            .eq('user_id', senderId)
+            .eq('friend_id', userId);
+
+        await supabaseClient
+            .from('friends')
+            .insert([
+                { user_id: userId, friend_id: senderId, status: 'accepted' }
+            ]);
+
+        return true;
+    },
+
+    async declineFriendRequest(senderId) {
+        if (!supabaseClient || !SupabaseAuth.currentUser) return false;
+        const userId = SupabaseAuth.currentUser.id;
+
+        await supabaseClient
+            .from('friends')
+            .delete()
+            .or(`and(user_id.eq.${senderId},friend_id.eq.${userId}),and(user_id.eq.${userId},friend_id.eq.${senderId})`);
+
+        return true;
+    },
+
+    async unfriend(friendId) {
+        if (!supabaseClient || !SupabaseAuth.currentUser) return false;
+        const userId = SupabaseAuth.currentUser.id;
+
+        await supabaseClient
+            .from('friends')
+            .delete()
+            .or(`and(user_id.eq.${userId},friend_id.eq.${friendId}),and(user_id.eq.${friendId},friend_id.eq.${userId})`);
+
+        return true;
+    },
+
+    async blockUser(targetUserId) {
+        if (!supabaseClient || !SupabaseAuth.currentUser) return false;
+        const userId = SupabaseAuth.currentUser.id;
+
+        await this.unfriend(targetUserId);
+
+        await supabaseClient
+            .from('friends')
+            .insert([
+                { user_id: userId, friend_id: targetUserId, status: 'blocked' }
+            ]);
+
+        return true;
+    },
+
+    async unblockUser(targetUserId) {
+        if (!supabaseClient || !SupabaseAuth.currentUser) return false;
+        const userId = SupabaseAuth.currentUser.id;
+
+        await supabaseClient
+            .from('friends')
+            .delete()
+            .eq('user_id', userId)
+            .eq('friend_id', targetUserId)
+            .eq('status', 'blocked');
+
+        return true;
+    },
+
     async getFriends() {
         if (!supabaseClient || !SupabaseAuth.currentUser) return [];
         try {
             const { data, error } = await supabaseClient
                 .from('friends')
                 .select('friend_id, profiles!friends_friend_id_fkey(id, email, username)')
-                .eq('user_id', SupabaseAuth.currentUser.id);
+                .eq('user_id', SupabaseAuth.currentUser.id)
+                .eq('status', 'accepted');
 
             if (error) {
-                // Fallback: simple query
                 const { data: rawFriends } = await supabaseClient
                     .from('friends')
                     .select('friend_id')
-                    .eq('user_id', SupabaseAuth.currentUser.id);
+                    .eq('user_id', SupabaseAuth.currentUser.id)
+                    .eq('status', 'accepted');
 
                 if (!rawFriends || rawFriends.length === 0) return [];
                 const ids = rawFriends.map(f => f.friend_id);
@@ -301,6 +369,70 @@ const SupabaseFriends = {
             return (data || []).map(d => d.profiles).filter(Boolean);
         } catch (e) {
             console.warn('Fetch friends error:', e);
+            return [];
+        }
+    },
+
+    async getFriendRequests() {
+        if (!supabaseClient || !SupabaseAuth.currentUser) return [];
+        try {
+            const { data, error } = await supabaseClient
+                .from('friends')
+                .select('user_id, profiles!friends_user_id_fkey(id, email, username)')
+                .eq('friend_id', SupabaseAuth.currentUser.id)
+                .eq('status', 'pending');
+
+            if (error) {
+                const { data: rawReqs } = await supabaseClient
+                    .from('friends')
+                    .select('user_id')
+                    .eq('friend_id', SupabaseAuth.currentUser.id)
+                    .eq('status', 'pending');
+
+                if (!rawReqs || rawReqs.length === 0) return [];
+                const ids = rawReqs.map(f => f.user_id);
+                const { data: profs } = await supabaseClient
+                    .from('profiles')
+                    .select('id, email, username')
+                    .in('id', ids);
+                return profs || [];
+            }
+
+            return (data || []).map(d => d.profiles).filter(Boolean);
+        } catch (e) {
+            console.warn('Fetch requests error:', e);
+            return [];
+        }
+    },
+
+    async getBlockedUsers() {
+        if (!supabaseClient || !SupabaseAuth.currentUser) return [];
+        try {
+            const { data, error } = await supabaseClient
+                .from('friends')
+                .select('friend_id, profiles!friends_friend_id_fkey(id, email, username)')
+                .eq('user_id', SupabaseAuth.currentUser.id)
+                .eq('status', 'blocked');
+
+            if (error) {
+                const { data: rawBlocked } = await supabaseClient
+                    .from('friends')
+                    .select('friend_id')
+                    .eq('user_id', SupabaseAuth.currentUser.id)
+                    .eq('status', 'blocked');
+
+                if (!rawBlocked || rawBlocked.length === 0) return [];
+                const ids = rawBlocked.map(f => f.friend_id);
+                const { data: profs } = await supabaseClient
+                    .from('profiles')
+                    .select('id, email, username')
+                    .in('id', ids);
+                return profs || [];
+            }
+
+            return (data || []).map(d => d.profiles).filter(Boolean);
+        } catch (e) {
+            console.warn('Fetch blocked error:', e);
             return [];
         }
     }
