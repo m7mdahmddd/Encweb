@@ -966,11 +966,31 @@ async function handleGoogleLogin() {
 function openFriendsModal() {
     clearFriendsBadge();
     document.getElementById('friends-modal').style.display = 'flex';
-    loadFriendsList();
+    switchFriendsTab('list');
 }
 
 function closeFriendsModal() {
     document.getElementById('friends-modal').style.display = 'none';
+}
+
+function switchFriendsTab(tab) {
+    const tabs = ['list', 'requests', 'search', 'blocked'];
+    tabs.forEach(t => {
+        const tabBtn = document.getElementById(`friends-tab-${t}`);
+        const panel = document.getElementById(`friends-panel-${t}`);
+        if (tabBtn) tabBtn.classList.remove('active');
+        if (panel) panel.style.display = 'none';
+    });
+
+    const activeBtn = document.getElementById(`friends-tab-${tab}`);
+    const activePanel = document.getElementById(`friends-panel-${tab}`);
+    if (activeBtn) activeBtn.classList.add('active');
+    if (activePanel) activePanel.style.display = 'block';
+
+    if (tab === 'list') loadMyFriendsList();
+    if (tab === 'requests') loadFriendRequestsList();
+    if (tab === 'search') document.getElementById('friend-search-input')?.focus();
+    if (tab === 'blocked') loadBlockedUsersList();
 }
 
 async function handleFriendSearch() {
@@ -989,46 +1009,196 @@ async function handleFriendSearch() {
     }
 
     resultsContainer.innerHTML = users.map(u => `
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--bg-card-border);">
-            <div>
-                <strong style="font-size: 0.9rem;">${u.username}</strong>
-                <div style="font-size: 0.78rem; color: var(--text-dim);">${u.email}</div>
+        <div class="user-card-item">
+            <div class="user-card-info">
+                <div class="user-avatar-sm">${(u.username || u.email || 'U').charAt(0).toUpperCase()}</div>
+                <div class="user-card-details">
+                    <span class="user-card-name">${u.username}</span>
+                    <span class="user-card-email">${u.email}</span>
+                </div>
             </div>
-            <button type="button" class="copy-btn" onclick="addFriend('${u.id}')">
-                <i data-lucide="user-plus"></i> Add
-            </button>
+            <div class="user-card-actions">
+                <button type="button" class="btn-action-xs primary" onclick="handleSendFriendRequest('${u.id}')">
+                    <i data-lucide="user-plus"></i> Add
+                </button>
+            </div>
         </div>
     `).join('');
     if (window.lucide) lucide.createIcons();
 }
 
-async function addFriend(friendId) {
+async function handleSendFriendRequest(friendId) {
     try {
-        await SupabaseFriends.addFriend(friendId);
-        showToast(currentLang === 'en' ? 'Friend added successfully!' : 'تم إضافة الصديق بنجاح!');
-        loadFriendsList();
+        await SupabaseFriends.sendFriendRequest(friendId);
+        showToast(currentLang === 'en' ? 'Friend request sent! 📩' : 'تم إرسال طلب الصداقة! 📩', 'info');
+        switchFriendsTab('list');
+    } catch (e) {
+        showToast(e.message, 'error');
+    }
+}
+
+async function loadMyFriendsList() {
+    const container = document.getElementById('my-friends-list');
+    if (!container) return;
+
+    container.innerHTML = `<div style="padding:15px; text-align:center; color:var(--text-dim); font-size:0.85rem;"><i data-lucide="loader-2" class="spin"></i> Loading friends...</div>`;
+    if (window.lucide) lucide.createIcons();
+
+    const friends = await SupabaseFriends.getFriends();
+    if (friends.length === 0) {
+        container.innerHTML = `<span style="font-size: 0.85rem; color: var(--text-dim); display: block; text-align: center; padding: 20px;">No friends added yet. Go to "Add Friends" tab to search!</span>`;
+        return;
+    }
+
+    container.innerHTML = friends.map(f => `
+        <div class="user-card-item">
+            <div class="user-card-info">
+                <div class="user-avatar-sm">${(f.username || f.email || 'F').charAt(0).toUpperCase()}</div>
+                <div class="user-card-details">
+                    <span class="user-card-name">${f.username}</span>
+                    <span class="user-card-email">${f.email}</span>
+                </div>
+            </div>
+            <div class="user-card-actions">
+                <button type="button" class="btn-action-xs primary" onclick="closeFriendsModal(); openChatModal(); selectChatFriend('${f.id}', '${f.username}');">
+                    <i data-lucide="message-square"></i> Chat
+                </button>
+                <button type="button" class="btn-action-xs secondary" onclick="handleUnfriendUser('${f.id}')">
+                    <i data-lucide="user-minus"></i> Unfriend
+                </button>
+                <button type="button" class="btn-action-xs danger" onclick="handleBlockUser('${f.id}')">
+                    <i data-lucide="shield-ban"></i> Block
+                </button>
+            </div>
+        </div>
+    `).join('');
+    if (window.lucide) lucide.createIcons();
+}
+
+async function loadFriendRequestsList() {
+    const container = document.getElementById('incoming-requests-list');
+    if (!container) return;
+
+    container.innerHTML = `<div style="padding:15px; text-align:center; color:var(--text-dim); font-size:0.85rem;"><i data-lucide="loader-2" class="spin"></i> Loading requests...</div>`;
+    if (window.lucide) lucide.createIcons();
+
+    const reqs = await SupabaseFriends.getFriendRequests();
+    const reqBadge = document.getElementById('friends-req-count');
+
+    if (reqs.length > 0 && reqBadge) {
+        reqBadge.textContent = reqs.length;
+        reqBadge.style.display = 'inline-block';
+    } else if (reqBadge) {
+        reqBadge.style.display = 'none';
+    }
+
+    if (reqs.length === 0) {
+        container.innerHTML = `<span style="font-size: 0.85rem; color: var(--text-dim); display: block; text-align: center; padding: 20px;">No incoming friend requests.</span>`;
+        return;
+    }
+
+    container.innerHTML = reqs.map(r => `
+        <div class="user-card-item">
+            <div class="user-card-info">
+                <div class="user-avatar-sm">${(r.username || r.email || 'R').charAt(0).toUpperCase()}</div>
+                <div class="user-card-details">
+                    <span class="user-card-name">${r.username}</span>
+                    <span class="user-card-email">${r.email}</span>
+                </div>
+            </div>
+            <div class="user-card-actions">
+                <button type="button" class="btn-action-xs success" onclick="handleAcceptFriendRequest('${r.id}')">
+                    <i data-lucide="check"></i> Accept
+                </button>
+                <button type="button" class="btn-action-xs danger" onclick="handleDeclineFriendRequest('${r.id}')">
+                    <i data-lucide="x"></i> Decline
+                </button>
+            </div>
+        </div>
+    `).join('');
+    if (window.lucide) lucide.createIcons();
+}
+
+async function loadBlockedUsersList() {
+    const container = document.getElementById('blocked-users-list');
+    if (!container) return;
+
+    const blocked = await SupabaseFriends.getBlockedUsers();
+    if (blocked.length === 0) {
+        container.innerHTML = `<span style="font-size: 0.85rem; color: var(--text-dim); display: block; text-align: center; padding: 20px;">No blocked users.</span>`;
+        return;
+    }
+
+    container.innerHTML = blocked.map(b => `
+        <div class="user-card-item">
+            <div class="user-card-info">
+                <div class="user-avatar-sm">${(b.username || b.email || 'B').charAt(0).toUpperCase()}</div>
+                <div class="user-card-details">
+                    <span class="user-card-name">${b.username}</span>
+                    <span class="user-card-email">${b.email}</span>
+                </div>
+            </div>
+            <div class="user-card-actions">
+                <button type="button" class="btn-action-xs secondary" onclick="handleUnblockUser('${b.id}')">
+                    <i data-lucide="unlock"></i> Unblock
+                </button>
+            </div>
+        </div>
+    `).join('');
+    if (window.lucide) lucide.createIcons();
+}
+
+async function handleAcceptFriendRequest(senderId) {
+    try {
+        await SupabaseFriends.acceptFriendRequest(senderId);
+        showToast(currentLang === 'en' ? 'Friend request accepted! 🎉' : 'تم قبول طلب الصداقة! 🎉', 'info');
+        loadFriendRequestsList();
         loadFriendsCheckboxList();
     } catch (e) {
         showToast(e.message, 'error');
     }
 }
 
-async function loadFriendsList() {
-    const container = document.getElementById('my-friends-list');
-    if (!container) return;
-
-    const friends = await SupabaseFriends.getFriends();
-    if (friends.length === 0) {
-        container.innerHTML = '<span style="font-size: 0.85rem; color: var(--text-dim);">No friends added yet.</span>';
-        return;
+async function handleDeclineFriendRequest(senderId) {
+    try {
+        await SupabaseFriends.declineFriendRequest(senderId);
+        showToast(currentLang === 'en' ? 'Friend request declined.' : 'تم رفض طلب الصداقة.', 'info');
+        loadFriendRequestsList();
+    } catch (e) {
+        showToast(e.message, 'error');
     }
+}
 
-    container.innerHTML = friends.map(f => `
-        <div style="display: flex; items-center; justify-content: space-between; padding: 6px 0;">
-            <span><i data-lucide="user"></i> <strong>${f.username}</strong> (${f.email})</span>
-        </div>
-    `).join('');
-    if (window.lucide) lucide.createIcons();
+async function handleUnfriendUser(friendId) {
+    try {
+        await SupabaseFriends.unfriend(friendId);
+        showToast(currentLang === 'en' ? 'Unfriended user.' : 'تم إزالة الصديق.', 'info');
+        loadMyFriendsList();
+        loadFriendsCheckboxList();
+    } catch (e) {
+        showToast(e.message, 'error');
+    }
+}
+
+async function handleBlockUser(targetId) {
+    try {
+        await SupabaseFriends.blockUser(targetId);
+        showToast(currentLang === 'en' ? 'User blocked.' : 'تم حظر المستخدم.', 'info');
+        loadMyFriendsList();
+        loadFriendsCheckboxList();
+    } catch (e) {
+        showToast(e.message, 'error');
+    }
+}
+
+async function handleUnblockUser(targetId) {
+    try {
+        await SupabaseFriends.unblockUser(targetId);
+        showToast(currentLang === 'en' ? 'User unblocked.' : 'تم إلغاء الحظر.', 'info');
+        loadBlockedUsersList();
+    } catch (e) {
+        showToast(e.message, 'error');
+    }
 }
 
 async function loadFriendsCheckboxList() {
